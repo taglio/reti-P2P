@@ -1,0 +1,70 @@
+class ricerca_thread(threading.Thread):
+
+    def __init__ (self,stringtoSearch,IPP2P,PP2P,PKtid):
+
+        threading.Thread.__init__(self)
+        self.stringToSearch=stringToSearch
+        self.IPP2P=IPP2P
+		self.PP2P=PP2P
+        self.PKtid=PKtid
+
+	def search_file(self,stringToSearch)	
+		for entry in os.listdir('/home/taglio/Scrivania'):
+    		if re.match(".*"+stringToSearch+".*" ,entry):
+    		    print entry
+				self.file_search.append(entry)
+		return self.file_search
+
+    def run(self):
+
+        self.file_search=[]
+		self.file_search=self.search_file(stringToSearch)
+		
+        
+        if len(self.file_search)>0:
+        
+            for i in range(int(len(file_search))):
+
+                
+                try :
+                    md5=""
+
+                    # Apro il file
+                    f = open(Home_Dir + percorsoCondivisi+tempFile,"rb")
+                    # Imposto la dimensione dei frammenti che voglio leggere
+                    size = os.path.getsize(Home_Dir + percorsoCondivisi+tempFile)
+                    # Creo l'oggetto md5
+                    m = hashlib.md5()
+
+                    # Leggo il file
+                    while 1:
+                    # Salvo in 'bytes' un numero di byte pari a 'size'
+                        bytes = f.read(size)
+
+                        # Se mi trovo alla fine del file, smetto di leggere
+                        if bytes == "": break
+
+                        # Aggiorno la checksum
+                        m.update(bytes)
+
+                    # Chiudo il file e stampo a schermo la checksum
+                    f.close()
+                    # print "%s ==> %s" % (file,m.hexdigest())
+                    md5=m.hexdigest()
+                    #print "md5 calcolato sul file: "+tempFile+" : "+md5
+
+                    lista=lista+sizePaddata+md5 #lunghezza = 10 md5= 32
+                except Exception,ex:
+                    print ex
+
+            pacchetto=reh+str(idRicerca)+str(numeroRisultati)+lista
+            print "** mando pacchetto: " + pacchetto
+
+            risp = socket(AF_INET, SOCK_STREAM)
+            try:
+
+                errore=risp.connect_ex((self.ipRicerca,myPort))
+                if errore==0 :
+                    risp.send(pacchetto)
+            except Exception, ex:
+                print ex

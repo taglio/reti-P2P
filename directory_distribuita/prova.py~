@@ -1,0 +1,6 @@
+import re
+import os
+search="12"
+for entry in os.listdir('/home/taglio/Scrivania'):
+    if re.match(".*"+search+".*" ,entry):
+        print entry

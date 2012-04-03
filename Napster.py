@@ -13,7 +13,7 @@ class PEER(object):
 		self.HOSTNAME = "10.42.43.1"
 		self.PORT = 9994
 		self.addr = (self.HOSTNAME,self.PORT)
-		self.p2pPort = 7029
+		self.p2pPort = 7050
 		self.resultfiles=[]
 		self.file_con=[]
 		
