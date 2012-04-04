@@ -159,7 +159,7 @@ class Handler(threading.Thread):
                         srcSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         PKtidRicercati.append(ipEId)
                         #TODO creare funzione di mia_ricerca in file condivisi e che se c'è invii il pacchetto di risposta
-                        rt = ricerca_thread(stringaRicerca,IPP2P,idRicercato)
+                        rt = ricerca_thread(search,IPP2P,PP2P,PKtid)
                         rt.start()
                         #propaga la query di mia_ricerca
                         if int(TTL)>1:

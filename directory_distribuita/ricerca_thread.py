@@ -1,12 +1,20 @@
+import socket
+import sys
+import hashlib
+import threading
+import os
+import re
+
 class ricerca_thread(threading.Thread):
 
-    def __init__ (self,stringtoSearch,IPP2P,PP2P,PKtid):
+    def __init__ (self,stringToSearch,IPP2P,PP2P,PKtid):
 
         threading.Thread.__init__(self)
         self.stringToSearch=stringToSearch
         self.IPP2P=IPP2P
-		self.PP2P=PP2P
+        self.PP2P=PP2P
         self.PKtid=PKtid
+        self.file_search=[]
 
 	def md5_for_file(self,fname, block_size=2**20):
 		
@@ -26,17 +34,18 @@ class ricerca_thread(threading.Thread):
     	return md5.digest()
 	#end of md5_for_file method
 
-	def search_file(self,stringToSearch)	
-		for entry in os.listdir('/home/taglio/Scrivania'):
+	def search_file(self,stringToSearch):
+        for entry in os.listdir('/home/taglio/Scrivania'):
     		if re.match(".*"+stringToSearch+".*" ,entry):
     		    print entry
 				self.file_search.append(entry)
-		return self.file_search
+        return self.file_search
+
 
     def run(self):
 
-        self.file_search=[]
-		self.file_search=self.search_file(stringToSearch)
+
+        self.file_search=self.search_file(self.stringToSearch)
 		
         
         if len(self.file_search)>0:
@@ -44,7 +53,7 @@ class ricerca_thread(threading.Thread):
             for i in range(int(len(file_search))):
 
                 try :
-                    filemd5=md5_for_file(file_search[i])
+                    filemd5=self.md5_for_file(file_search[i])
 					filename = "%(#)0100s" %{"#":file_search[i]}
 					packet="AQUE"+PKtid+myIP+myport+filemd5+filename
 					print "** mando pacchetto: " + pacchetto
