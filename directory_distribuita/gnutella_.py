@@ -3,10 +3,12 @@ import socket
 import sys
 import hashlib
 import threading
-from risultati import ResultFile
+import ResultFile
 import thread_gnutella
 import ricerca_thread
 import shutil
+import os
+import re
 
 class PEER(object):
 
@@ -23,7 +25,6 @@ class PEER(object):
         self.addr = (self.HOSTNAME,self.PORT)
         #port that I make available to other peers for downloading
         self.p2pPort = 6120
-        self.resultfiles=[]
         self.file_con=[]
         self.ip = self.sock.getsockname()[0]
         ips_noform = self.ip.split(".")
@@ -60,6 +61,11 @@ class PEER(object):
         return lettiTot
         #end of sockread method
 
+    def generate_pktID(self):
+        size=16
+        chars = string.ascii_uppercase + string.digits
+        return ''.join(random.choice(chars) for x in range(size))
+
 
     def md5_for_file(self,fname, block_size=2**20):
 
@@ -79,6 +85,22 @@ class PEER(object):
         return md5.digest()
         #end of md5_for_file method
 
+    def startProgram(self):
+
+        listenSocket = thread_gnutella.P2P(myIp,p2pPort)
+        listenSocket.start()
+        #"NEAR"[4B].PKtid[16B].IPP2P[15B].PP2P[5B].TTL[2B]
+        TTLnoform=2
+        TTL= "%(#)02d" %{"#":int(TTLnoform)}
+        PKtid = self.generate_pktID()
+        packetNear = "NEAR"+PKtid+myIp+p2pPort+TTL
+        nearSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        for i in range(len(self.listaIpPeer)) :
+            nearSocket.connect(self.listaIpPeer[i])
+            nearSocket.send(packetNear)
+
+
+
     def download(self,i):
 
         """
@@ -88,7 +110,7 @@ class PEER(object):
         #selected from keyboard file to download
         rs=self.listaRisultati[int(i)]
         #TODO se faccio così elimino tutti i risultati della ricerca,quindi guardare se può andare bene oppure no
-        listaRisultati = []
+        self.listaRisultati = []
         #create the connection for download the file
         self.downip=rs.ip
         self.downport=int(rs.porta)
@@ -125,17 +147,14 @@ class PEER(object):
 
     #end of download method
 
-    def my_research(self):
+    def my_research(self,stringa):
 
-        stringa = raw_input("""Cosa vuoi cercare ??  : """)
-        for i in range(100-len(stringa)) :
-            stringa=stringa+" "
-            #print stringa
-        self.PKtid_send=random.randint(0,99999)#TODO mettere a posto il paktid
+        string_form= "%(#)02s" %{"#":stringa}
+        self.PKtid_send=self.generate_pktID()
         TTLnoform = 4
         TTL= "%(#)02d" %{"#":int(TTLnoform)}
         #"QUER"[4B].PKtid[16B].IPP2P[15B].PP2P[5B].TTL[2B].Ricerca[20B]
-        pacchetto="QUER"+str(self.PKtid_send)+myIp+myport+str(TTL)+stringa
+        pacchetto="QUER"+str(self.PKtid_send)+myIp+myport+str(TTL)+string_form
         srcSocket = socket(AF_INET, SOCK_STREAM)
         try:
 
@@ -149,24 +168,22 @@ class PEER(object):
             timeStart = time.time()
             time.sleep(30)
             print "**** Stampa Risultati ***** "
-            dim = len(listaRisultati)
+            dim = len(self.listaRisultati)
             firstloop = True
             while ((time.time()-timeStart) > 270 ):
                 if firstloop:
-                    for i in range(0,len(listaRisultati)):
+                    for i in range(0,len(self.listaRisultati)):
                         rs=listaRisultati[i]
                         print "%d %s %s:%s" %(i,rs.filename,rs.ip,rs.port)
                     firstloop = False
                 else :
-                    if (len(listaRisultati)>dim):
-                        count = len(listaRisultati)-dim
+                    if (len(self.listaRisultati)>dim):
+                        count = len(self.listaRisultati)-dim
                         for i in range(0,count):
                             new = dim +i
-                            rs=listaRisultati[new]
+                            rs=self.listaRisultati[new]
                             print "%d %s %s:%s" %(new,rs.filename,rs.ip,rs.port)
-                        dim = len(listaRisultati)
+                        dim = len(self.listaRisultati)
             self.PKtid_send = 0
-
-
         except Exception,ex :
             print ex
