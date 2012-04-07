@@ -4,10 +4,9 @@ import threading
 import time
 import os
 import hashlib
+import risultati
 
-PKtidRicercati=[]
-listaIpPeer=[]
-listaRisultati=[]
+
 
 class P2P(threading.Thread):
 
@@ -17,6 +16,7 @@ class P2P(threading.Thread):
         self.local_IP = local_IP
         self.P2P_port = P2P_port
         self.address=(self.local_IP,self.P2P_port)
+
 
 
 
@@ -34,17 +34,24 @@ class P2P(threading.Thread):
 
             print "il client " + self.local_IP + " si e' connesso"
 
-            peer = Handler(Peer_Client)
+            peer = Handler(Peer_Client,IP_Client)
             peer.start()
 
 
 class Handler(threading.Thread):
 
 
-    def __init__(self, Peer_client):
+    def __init__(self, Peer_client,IP_Client):
 
         threading.Thread.__init__(self)
         self.connection=Peer_client
+        self.addressConn= IP_Client
+        self.listaIpPeer = []
+        self.PKtidRicercati = []
+        self.listaRisultati = []
+        self.file_cond=[]
+        self.peerDownload=[]
+
 
 
     def md5_for_file(self,fname, block_size=2**20):
@@ -63,11 +70,11 @@ class Handler(threading.Thread):
     def  addPeer(self,ip,port):
         address=(ip,port)
         count = 0
-        for i in range(len(listaIpPeer)):
+        for i in range(len(self.listaIpPeer)):
             if listaIpPeer[i]== address:
-                count = count + 1
+                count += 1
         if count == 1:
-            listaIpPeer.append(address)
+            self.listaIpPeer.append(address)
 
 
 
@@ -83,19 +90,16 @@ class Handler(threading.Thread):
         if data == "RETR":
             #receive RETR and search md5 of file from file_condivisi
             md5tofind = self.connection.recv(16)
-            file_condivisi = open('/home/taglio/Scrivania/file_condivisi.txt', 'r')
-            self.file_con=file_condivisi.readlines()
-            for i in range(0,len(self.file_con)) :
-                if self.md5_for_file(self.file_con[i].rstrip("\n")) == md5tofind:
-                    self.nomefile=self.file_con[i]
-            file_condivisi.close()
+            self.file_cond = os.listdir('/home/taglio/Scrivania')
+            for i in range(0,len(self.file_cond)) :
+                if self.md5_for_file(self.file_cond[i]) == md5tofind:
+                    self.nomefile=self.file_cond[i]
 
-
-
-
+            conn=List(self.addressConn,self.nomefile)
+            self.peerDownload.append(conn)
             #open the file, divide it in chunk
             try :
-                file_to_send = open('/home/taglio/Scrivania/'+self.nomefile.rstrip("\n"), "rb")
+                file_to_send = open('/home/taglio/Scrivania/'+self.nomefile, "rb")
             except Exception,expt:
                 print "Error: %s" %expt + "\n"
                 print "An error occured, file upload unavailable for peer \n"
@@ -150,21 +154,20 @@ class Handler(threading.Thread):
                     #self.addPeer(IPP2P,PP2P)
                     ipEId=IPP2P+PKtid
                     # ricercare all'interno del nostro database se abbiamo già fatto la mia_ricerca
-                    for i in range(len(PKtidRicercati)) :
-                        if ipEId==PKtidRicercati[i] :
+                    for i in range(len(self.PKtidRicercati)) :
+                        if ipEId==self.PKtidRicercati[i] :
                             trovata=1
                             print "Ricerca già effettuata in precendenza: ignoro richiesta .."
 
                     if trovata==0:
                         srcSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        PKtidRicercati.append(ipEId)
-                        #TODO creare funzione di mia_ricerca in file condivisi e che se c'è invii il pacchetto di risposta
-                        rt = ricerca_thread(search,IPP2P,PP2P,PKtid)
+                        self.PKtidRicercati.append(ipEId)
+                        rt = ricerca_thread.ricerca_thread(search,IPP2P,PP2P,PKtid)
                         rt.start()
                         #propaga la query di mia_ricerca
                         if int(TTL)>1:
-                        for i in range(len(listaIpPeer)) :
-                            srcSocket.connect(listaIpPeer[i])
+                        for i in range(len(self.listaIpPeer)) :
+                            srcSocket.connect(self.listaIpPeer[i])
                             newTTL = int(TTL)-1
                             newTTLform= "%(#)02d" %{"#":int(newTTL)}
                             packet = "QUER"+PKtid+IPP2P+PP2P+str(newTTLform)+search
@@ -186,8 +189,8 @@ class Handler(threading.Thread):
                 filename = data[52:152]
                 trovato = False
                 if (PKtid == self.PKtid_send):
-                    for i in range(0,len(listaRisultati)):
-                        rs = listaRisultati[i]
+                    for i in range(0,len(self.listaRisultati)):
+                        rs = self.listaRisultati[i]
                         if (rs.Md5 == Md5) :
                             if (rs.ip == IPP2P) and (rs.port == PP2P):
                                 print "ho già questo indirizzo associato a questo md5"
@@ -195,12 +198,12 @@ class Handler(threading.Thread):
                             else :
                                 self.num += 1
                                 new=ResultFile(self.num,Md5,filename,IPP2P,PP2P)
-                                listaRisultati.append(new)
+                                self.listaRisultati.append(new)
                                 trovato = True
                     if not trovato:
                         self.num +=1
                         new=ResultFile(self.num,Md5,filename,IPP2P,PP2P)
-                        listaRisultati.append(new)
+                        self.listaRisultati.append(new)
                 else :
                     print "la ricerca non è stata effettuata da me"
             except Exception,ex :
@@ -222,8 +225,8 @@ class Handler(threading.Thread):
                 nearSocket.send(ackForNear)
                 #propaga al vicino
                 if int(TTL)>1:
-                    for i in range(len(listaIpPeer)) :
-                        nearSocket.connect(listaIpPeer[i])
+                    for i in range(len(self.listaIpPeer)) :
+                        nearSocket.connect(self.listaIpPeer[i])
                         newTTL = int(TTL)-1
                         newTTLform= "%(#)02d" %{"#":int(newTTL)}
                         packet = "NEAR"+PKtid+IPP2P+PP2P+str(newTTLform)
