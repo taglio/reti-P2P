@@ -16,30 +16,30 @@ class ricerca_thread(threading.Thread):
         self.PKtid=PKtid
         self.file_search=[]
 
-	def md5_for_file(self,fname, block_size=2**20):
-		
-		"""
-		This method md5_for_file allows the user to get the md5 checksum of a file, given as parameter.
-		"""
+    def md5_for_file(self,fname, block_size=2**20):
+        """
+	This method md5_for_file allows the user to get the md5 checksum of a file, given as parameter.
+	"""
+        f=open('/home/taglio/Scrivania/'+fname,'rb')
+        md5 = hashlib.md5()
 
-    	f=open('/home/taglio/Scrivania/'+fname,'rb')
-    	md5 = hashlib.md5()
-    
-    	while True:
-        	data = f.read(block_size)
-        	if not data:
-        	    	break
+        while True:
+            data = f.read(block_size)
+            if not data:
+                break
             md5.update(data)
-		f.close()
-    	return md5.digest()
+        f.close()
+        return md5.digest()
+
 	#end of md5_for_file method
 
-	def search_file(self,stringToSearch):
+    def search_file(self,stringToSearch):
         for entry in os.listdir('/home/taglio/Scrivania'):
-    		if re.match(".*"+stringToSearch+".*" ,entry):
-    		    print entry
-				self.file_search.append(entry)
+            if re.match(".*"+stringToSearch+".*" ,entry):
+                print entry
+                self.file_search.append(entry)
         return self.file_search
+
 
 
     def run(self):
@@ -50,11 +50,11 @@ class ricerca_thread(threading.Thread):
         
         if len(self.file_search)>0:
         
-            for i in range(int(len(file_search))):
+            for i in range(int(len(self.file_search))):
 
                 try :
-                    filemd5=self.md5_for_file(file_search[i])
-					filename = "%(#)0100s" %{"#":file_search[i]}
+                    filemd5=self.md5_for_file(self.file_search[i])
+					filename = "%(#)0100s" %{"#":self.file_search[i]}
 					packet="AQUE"+PKtid+myIP+myport+filemd5+filename
 					print "** mando pacchetto: " + pacchetto
 					ack_search = socket(AF_INET, SOCK_STREAM)
